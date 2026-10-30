@@ -15,7 +15,7 @@ The host entry is also available to tools that read `~/.ssh/config`, such as VS 
 ## Requirements
 
 - Windows 10 or 11 with the **OpenSSH Client** optional feature, or Linux/macOS with `ssh` and `ssh-keygen` installed
-- A server account that can log in with a password and write to its `~/.ssh` directory
+- A server account that can log in with a password. On Unix-like servers, it must be able to write to `~/.ssh`; EasySSH handles the Windows OpenSSH authorized-keys locations and permissions.
 
 ## Run
 
