@@ -48,5 +48,21 @@ printf 'Verify the server host-key fingerprint with its administrator before acc
 printf 'Enter the server password at the OpenSSH prompt; EasySSH does not capture or save it.\n'
 ssh "$destination" "$remote_command" || fail 'Server setup failed. Check the hostname, username, password, host fingerprint, and server SSH access.'
 
-printf '\nKey installed. Try: ssh %s\n' "$destination"
+ssh_config="$ssh_dir/config"
+if ! awk -v h="$host" 'tolower($1) == "host" && tolower($2) == tolower(h) { found = 1 } END { exit !found }' "$ssh_config" 2>/dev/null; then
+    config_key_path=$private_key
+    {
+        if [[ -f "$ssh_config" && -s "$ssh_config" ]]; then
+            printf '\n'
+        fi
+        printf 'Host %s\n    HostName %s\n    User %s\n    IdentityFile "%s"\n    IdentitiesOnly yes\n' \
+            "$host" "$host" "$username" "$config_key_path"
+    } >> "$ssh_config" || fail "Could not write $ssh_config."
+    chmod 600 "$ssh_config" || fail "Could not secure $ssh_config."
+    printf 'Added %s to %s\n' "$host" "$ssh_config"
+else
+    printf 'An SSH config entry for %s already exists; leaving it unchanged.\n' "$host"
+fi
+
+printf '\nKey installed. Try: ssh %s (or ssh %s)\n' "$host" "$destination"
 printf 'Private key: %s\n' "$private_key"

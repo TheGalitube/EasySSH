@@ -26,7 +26,10 @@ New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
 
 if (-not (Test-Path -LiteralPath $privateKey)) {
     Write-Info "Creating an Ed25519 key at $privateKey"
-    & ssh-keygen -t ed25519 -f $privateKey -N '' -C "$userName@$hostName"
+    # Windows PowerShell can drop a bare empty native-command argument. The
+    # embedded quotes make the Windows argument parser pass an actual empty
+    # value to ssh-keygen for -N (no key passphrase).
+    & ssh-keygen -t ed25519 -f $privateKey -N '""' -C "$userName@$hostName"
     if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'Key generation failed.' }
 } elseif (-not (Test-Path -LiteralPath $publicKey)) {
     Stop-WithMessage "A private key exists at $privateKey but its .pub file is missing. Move or restore the matching public key, then try again."
@@ -51,6 +54,26 @@ Write-Host 'Then enter the server password at the OpenSSH prompt. EasySSH does n
 & ssh $destination $remoteCommand
 if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'The server setup did not complete. Check the hostname, username, password, host fingerprint, and server SSH access, then run EasySSH again.' }
 
-Write-Host "`nKey installed. Try: ssh $destination" -ForegroundColor Green
+$sshConfig = Join-Path $sshDir 'config'
+$escapedHost = [regex]::Escape($hostName)
+$hasHostEntry = $false
+if (Test-Path -LiteralPath $sshConfig) {
+    $hasHostEntry = [bool](Get-Content -LiteralPath $sshConfig | Where-Object { $_ -match "^\s*Host\s+$escapedHost(?:\s|$)" } | Select-Object -First 1)
+}
+if (-not $hasHostEntry) {
+    $configKeyPath = $privateKey.Replace('\', '/')
+    $configBlock = "Host $hostName`r`n    HostName $hostName`r`n    User $userName`r`n    IdentityFile `"$configKeyPath`"`r`n    IdentitiesOnly yes"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    if (Test-Path -LiteralPath $sshConfig) {
+        [System.IO.File]::AppendAllText($sshConfig, "`r`n$configBlock", $utf8NoBom)
+    } else {
+        [System.IO.File]::WriteAllText($sshConfig, $configBlock, $utf8NoBom)
+    }
+    Write-Info "Added $hostName to $sshConfig"
+} else {
+    Write-Info "An SSH config entry for $hostName already exists; leaving it unchanged."
+}
+
+Write-Host "`nKey installed. Try: ssh $hostName (or ssh $destination)" -ForegroundColor Green
 Write-Host "Private key: $privateKey"
 Read-Host 'Press Enter to close'

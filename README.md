@@ -2,11 +2,15 @@
 
 EasySSH prepares key-based SSH login for a server. It includes a PowerShell script and `.bat` launcher for Windows, plus a Bash script for Linux and macOS.
 
-It asks for a hostname or IP and SSH username, creates an Ed25519 key in your normal Windows OpenSSH key folder (or reuses the existing default key), and installs the public key on the server. The server password is entered only in OpenSSH's own interactive prompt; EasySSH never reads or saves it. After setup, connect with:
+It asks for a hostname or IP and SSH username, creates an Ed25519 key in your normal OpenSSH key folder (or reuses the existing default key), installs the public key on the server, and adds a host entry to your SSH config. The server password is entered only in OpenSSH's own interactive prompt; EasySSH never reads or saves it. After setup, connect with either command:
 
 ```powershell
+ssh hostname
+# or
 ssh username@hostname
 ```
+
+The host entry is also available to tools that read `~/.ssh/config`, such as VS Code Remote SSH. If an entry for that host already exists, EasySSH leaves it unchanged.
 
 ## Requirements
 
